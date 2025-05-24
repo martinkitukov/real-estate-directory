@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from pydantic_settings import BaseSettings
 from pydantic import AnyHttpUrl, EmailStr, validator
 
@@ -18,8 +18,8 @@ class Settings(BaseSettings):
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str
-    POSTGRES_HOST: str
-    POSTGRES_PORT: str
+    POSTGRES_HOST: str = "localhost"
+    POSTGRES_PORT: str = "5432"
     
     # CORS
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
@@ -32,14 +32,14 @@ class Settings(BaseSettings):
             return v
         raise ValueError(v)
     
-    # Email
+    # Email (Optional for authentication testing)
     SMTP_TLS: bool = True
     SMTP_PORT: int = 587
-    SMTP_HOST: str
-    SMTP_USER: EmailStr
-    SMTP_PASSWORD: str
-    EMAILS_FROM_EMAIL: EmailStr
-    EMAILS_FROM_NAME: str
+    SMTP_HOST: Optional[str] = None
+    SMTP_USER: Optional[EmailStr] = None
+    SMTP_PASSWORD: Optional[str] = None
+    EMAILS_FROM_EMAIL: Optional[EmailStr] = None
+    EMAILS_FROM_NAME: Optional[str] = None
     
     class Config:
         case_sensitive = True
