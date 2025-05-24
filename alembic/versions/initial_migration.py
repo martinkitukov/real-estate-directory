@@ -17,12 +17,8 @@ branch_labels = None
 depends_on = None
 
 def upgrade() -> None:
-    # Create enum types
-    op.execute("CREATE TYPE user_role AS ENUM ('buyer', 'developer', 'admin')")
-    op.execute("CREATE TYPE verification_status AS ENUM ('pending', 'verified', 'rejected')")
-    op.execute("CREATE TYPE project_status AS ENUM ('planning', 'under_construction', 'completed')")
-    op.execute("CREATE TYPE project_type AS ENUM ('apartment_building', 'house_complex')")
-
+    # Note: Enum types will be created automatically by SQLAlchemy when creating tables
+    
     # Create users table
     op.create_table(
         'users',
@@ -44,7 +40,7 @@ def upgrade() -> None:
     op.create_table(
         'developers',
         sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('user_id', sa.Integer(), nullable=True),
+        sa.Column('user_id', sa.Integer(), nullable=False),
         sa.Column('company_name', sa.String(), nullable=False),
         sa.Column('contact_person', sa.String(), nullable=True),
         sa.Column('phone', sa.String(), nullable=True),
@@ -147,8 +143,4 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_users_email'), table_name='users')
     op.drop_table('users')
 
-    # Drop enum types
-    op.execute('DROP TYPE project_type')
-    op.execute('DROP TYPE project_status')
-    op.execute('DROP TYPE verification_status')
-    op.execute('DROP TYPE user_role') 
+    # Note: Enum types will be dropped automatically when tables are dropped 
