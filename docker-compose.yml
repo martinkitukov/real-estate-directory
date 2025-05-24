@@ -1,0 +1,40 @@
+version: "3.8"
+
+services:
+  # PostgreSQL with PostGIS
+  db:
+    image: postgis/postgis:15-3.3
+    container_name: novadom_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - novadom_network
+    env_file:
+      - .env
+
+  # Redis for caching (will be useful later)
+  redis:
+    image: redis:7-alpine
+    container_name: novadom_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - novadom_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  novadom_network:
+    driver: bridge 
