@@ -16,42 +16,6 @@ from app.schemas.auth import UserType
 security = HTTPBearer()
 
 
-class RequireUserType:
-    """
-    Dependency class to enforce user type requirements.
-    Following Open/Closed Principle - can be extended with new user types.
-    """
-    
-    def __init__(self, allowed_types: list[UserType]):
-        self.allowed_types = allowed_types
-    
-    def __call__(
-        self, 
-        current_user: Union[User, Developer] = Depends(get_current_user)
-    ):
-        # Determine user type from the user instance
-        if isinstance(current_user, User):
-            user_type = UserType.BUYER
-        elif isinstance(current_user, Developer):
-            if current_user.verification_status == "verified":
-                user_type = UserType.DEVELOPER
-            else:
-                user_type = UserType.UNVERIFIED_DEVELOPER
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Invalid user type"
-            )
-        
-        if user_type not in self.allowed_types:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access denied. Required user types: {[ut.value for ut in self.allowed_types]}"
-            )
-        
-        return current_user
-
-
 # Dependency functions
 def get_auth_service(db: AsyncSession = Depends(get_db)) -> AuthService:
     """
@@ -163,6 +127,43 @@ async def get_current_unverified_developer(
         )
     
     return current_user
+
+
+# RequireUserType class - defined after get_current_user to avoid circular import
+class RequireUserType:
+    """
+    Dependency class to enforce user type requirements.
+    Following Open/Closed Principle - can be extended with new user types.
+    """
+    
+    def __init__(self, allowed_types: list[UserType]):
+        self.allowed_types = allowed_types
+    
+    def __call__(
+        self, 
+        current_user: Union[User, Developer] = Depends(get_current_user)
+    ):
+        # Determine user type from the user instance
+        if isinstance(current_user, User):
+            user_type = UserType.BUYER
+        elif isinstance(current_user, Developer):
+            if current_user.verification_status == "verified":
+                user_type = UserType.DEVELOPER
+            else:
+                user_type = UserType.UNVERIFIED_DEVELOPER
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid user type"
+            )
+        
+        if user_type not in self.allowed_types:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access denied. Required user types: {[ut.value for ut in self.allowed_types]}"
+            )
+        
+        return current_user
 
 
 # Pre-configured dependency instances for common use cases
