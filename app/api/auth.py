@@ -57,6 +57,8 @@ async def register_buyer(
     - 201 status code for successful creation
     - Returns created resource representation
     """
+    print(f"🔍 DEBUG: register_buyer called with email: {registration_data.email}")
+    
     try:
         new_user = await auth_service.register_buyer(registration_data)
         

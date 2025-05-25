@@ -32,7 +32,7 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     first_name = Column(String)
     last_name = Column(String)
-    role = Column(Enum(UserRole), nullable=False)
+    role = Column(Enum(UserRole, name='user_role'), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = Column(Boolean, default=True)
@@ -50,7 +50,7 @@ class Developer(Base):
     phone = Column(String)
     address = Column(String)
     website = Column(String)
-    verification_status = Column(Enum(VerificationStatus), default=VerificationStatus.PENDING)
+    verification_status = Column(Enum(VerificationStatus, name='verification_status'), default=VerificationStatus.PENDING)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -71,8 +71,8 @@ class Project(Base):
     city = Column(String)
     neighborhood = Column(String)
     country = Column(String)
-    project_type = Column(Enum(ProjectType))
-    status = Column(Enum(ProjectStatus))
+    project_type = Column(Enum(ProjectType, name='project_type'))
+    status = Column(Enum(ProjectStatus, name='project_status'))
     expected_completion_date = Column(DateTime)
     cover_image_url = Column(String)
     gallery_urls = Column(Text)  # JSON string of URLs

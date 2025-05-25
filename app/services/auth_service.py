@@ -1,16 +1,16 @@
 """
-Authentication service layer.
-Following Single Responsibility and Dependency Inversion principles.
+Authentication service implementing business logic for user registration and authentication.
+Following Single Responsibility Principle and Dependency Inversion Principle.
 """
 from typing import Optional, Union
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from fastapi import HTTPException, status
+from fastapi import status, HTTPException
 
-from app.db.models import User, Developer
+from app.db.models import User, Developer, UserRole, VerificationStatus
 from app.schemas.auth import (
-    BuyerRegistrationRequest,
-    DeveloperRegistrationRequest,
+    BuyerRegistrationRequest, 
+    DeveloperRegistrationRequest, 
     UserLoginRequest,
     UserType
 )
@@ -18,7 +18,8 @@ from app.core.security import PasswordManager, JWTManager, create_user_token_dat
 
 
 class AuthenticationError(HTTPException):
-    """Custom authentication error."""
+    """Custom exception for authentication errors."""
+    
     def __init__(self, detail: str, error_code: str):
         super().__init__(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -29,21 +30,19 @@ class AuthenticationError(HTTPException):
 
 
 class RegistrationError(HTTPException):
-    """Custom registration error."""
+    """Custom exception for registration errors."""
+    
     def __init__(self, detail: str, status_code: int = status.HTTP_400_BAD_REQUEST):
         super().__init__(status_code=status_code, detail=detail)
 
 
 class AuthService:
     """
-    Authentication service handling all auth-related business logic.
-    Following Single Responsibility Principle.
+    Authentication service implementing business logic.
+    Following Dependency Inversion - depends on abstractions (AsyncSession interface).
     """
     
     def __init__(self, db: AsyncSession):
-        """
-        Dependency Inversion: Depends on abstraction (AsyncSession) not concretion.
-        """
         self.db = db
     
     async def register_buyer(
@@ -70,12 +69,16 @@ class AuthService:
         # Create new buyer
         hashed_password = PasswordManager.get_password_hash(registration_data.password)
         
+        # Debug: verify the actual role value being used
+        role_value = UserRole.BUYER.value
+        print(f"DEBUG: Using role value: {repr(role_value)}")
+        
         new_user = User(
             email=registration_data.email,
             password_hash=hashed_password,
             first_name=registration_data.first_name,
             last_name=registration_data.last_name,
-            user_type=UserType.BUYER
+            role=role_value
         )
         
         self.db.add(new_user)
@@ -90,6 +93,7 @@ class AuthService:
     ) -> Developer:
         """
         Register a new developer (unverified by default).
+        Creates both a User record and a Developer record.
         
         Args:
             registration_data: Developer registration information
@@ -100,25 +104,34 @@ class AuthService:
         Raises:
             RegistrationError: If email already exists or other validation fails
         """
-        # Check if email already exists in both users and developers
+        # Check if email already exists
         existing_user = await self._get_user_by_email(registration_data.email)
-        existing_developer = await self._get_developer_by_email(registration_data.email)
-        
-        if existing_user or existing_developer:
+        if existing_user:
             raise RegistrationError("Email already registered")
         
-        # Create new developer (unverified by default)
+        # Create new user record with DEVELOPER role
         hashed_password = PasswordManager.get_password_hash(registration_data.password)
         
-        new_developer = Developer(
+        new_user = User(
             email=registration_data.email,
             password_hash=hashed_password,
+            first_name=registration_data.contact_person.split()[0] if registration_data.contact_person else "",
+            last_name=" ".join(registration_data.contact_person.split()[1:]) if len(registration_data.contact_person.split()) > 1 else "",
+            role=UserRole.DEVELOPER.value
+        )
+        
+        self.db.add(new_user)
+        await self.db.flush()  # Get the user ID before creating developer record
+        
+        # Create developer profile record
+        new_developer = Developer(
+            user_id=new_user.id,
             company_name=registration_data.company_name,
             contact_person=registration_data.contact_person,
             phone=registration_data.phone,
             address=registration_data.address,
             website=registration_data.website,
-            verification_status="pending"  # Default to pending verification
+            verification_status=VerificationStatus.PENDING
         )
         
         self.db.add(new_developer)
@@ -130,7 +143,7 @@ class AuthService:
     async def authenticate_user(
         self, 
         login_data: UserLoginRequest
-    ) -> tuple[Union[User, Developer], str]:
+    ) -> tuple[User, str]:
         """
         Authenticate user and return user instance with JWT token.
         
@@ -143,36 +156,39 @@ class AuthService:
         Raises:
             AuthenticationError: If credentials are invalid
         """
-        # Try to find user in buyers table
+        # Find user by email
         user = await self._get_user_by_email(login_data.email)
-        if user and PasswordManager.verify_password(login_data.password, user.password_hash):
-            token_data = create_user_token_data(user.id, UserType.BUYER)
-            access_token = JWTManager.create_access_token(token_data)
-            return user, access_token
         
-        # Try to find user in developers table
-        developer = await self._get_developer_by_email(login_data.email)
-        if developer and PasswordManager.verify_password(login_data.password, developer.password_hash):
-            # Determine user type based on verification status
-            user_type = (
-                UserType.DEVELOPER if developer.verification_status == "verified"
-                else UserType.UNVERIFIED_DEVELOPER
+        if not user or not PasswordManager.verify_password(login_data.password, user.password_hash):
+            raise AuthenticationError(
+                detail="Invalid email or password",
+                error_code="AUTH_INVALID_CREDENTIALS"
             )
-            
-            token_data = create_user_token_data(developer.id, user_type)
-            access_token = JWTManager.create_access_token(token_data)
-            return developer, access_token
         
-        # If no valid user found
-        raise AuthenticationError(
-            detail="Invalid email or password",
-            error_code="AUTH_INVALID_CREDENTIALS"
-        )
+        if not user.is_active:
+            raise AuthenticationError(
+                detail="Account is deactivated",
+                error_code="AUTH_ACCOUNT_DEACTIVATED"
+            )
+        
+        # Determine user type for token
+        user_type = self._get_user_type_from_role(user.role)
+        
+        # For developers, check verification status
+        if user.role == UserRole.DEVELOPER:
+            developer = await self._get_developer_by_user_id(user.id)
+            if developer and developer.verification_status != VerificationStatus.VERIFIED:
+                user_type = UserType.UNVERIFIED_DEVELOPER
+        
+        token_data = create_user_token_data(user.id, user_type)
+        access_token = JWTManager.create_access_token(token_data)
+        
+        return user, access_token
     
     async def get_current_user(
         self, 
         token: str
-    ) -> Union[User, Developer]:
+    ) -> User:
         """
         Get current user from JWT token.
         
@@ -180,7 +196,7 @@ class AuthService:
             token: JWT access token
             
         Returns:
-            User or Developer instance
+            User instance
             
         Raises:
             AuthenticationError: If token is invalid or user not found
@@ -194,58 +210,56 @@ class AuthService:
             )
         
         user_id = user_data["user_id"]
-        user_type = user_data["user_type"]
         
-        # Get user based on type
-        if user_type == UserType.BUYER:
-            user = await self._get_user_by_id(user_id)
-            if not user:
-                raise AuthenticationError(
-                    detail="User not found",
-                    error_code="AUTH_USER_NOT_FOUND"
-                )
-            return user
-        
-        elif user_type in [UserType.DEVELOPER, UserType.UNVERIFIED_DEVELOPER]:
-            developer = await self._get_developer_by_id(user_id)
-            if not developer:
-                raise AuthenticationError(
-                    detail="Developer not found",
-                    error_code="AUTH_USER_NOT_FOUND"
-                )
-            return developer
-        
-        else:
+        # Get user from database
+        user = await self._get_user_by_id(user_id)
+        if not user:
             raise AuthenticationError(
-                detail="Invalid user type",
-                error_code="AUTH_INVALID_USER_TYPE"
+                detail="User not found",
+                error_code="AUTH_USER_NOT_FOUND"
             )
+        
+        if not user.is_active:
+            raise AuthenticationError(
+                detail="Account is deactivated",
+                error_code="AUTH_ACCOUNT_DEACTIVATED"
+            )
+        
+        return user
+    
+    async def get_developer_profile(self, user_id: int) -> Optional[Developer]:
+        """Get developer profile for a user."""
+        return await self._get_developer_by_user_id(user_id)
     
     # Private helper methods
     async def _get_user_by_email(self, email: str) -> Optional[User]:
-        """Get user by email from buyers table."""
+        """Get user by email."""
         result = await self.db.execute(
             select(User).where(User.email == email)
         )
         return result.scalar_one_or_none()
     
-    async def _get_developer_by_email(self, email: str) -> Optional[Developer]:
-        """Get developer by email from developers table."""
-        result = await self.db.execute(
-            select(Developer).where(Developer.email == email)
-        )
-        return result.scalar_one_or_none()
-    
     async def _get_user_by_id(self, user_id: int) -> Optional[User]:
-        """Get user by ID from buyers table."""
+        """Get user by ID."""
         result = await self.db.execute(
             select(User).where(User.id == user_id)
         )
         return result.scalar_one_or_none()
     
-    async def _get_developer_by_id(self, developer_id: int) -> Optional[Developer]:
-        """Get developer by ID from developers table."""
+    async def _get_developer_by_user_id(self, user_id: int) -> Optional[Developer]:
+        """Get developer profile by user ID."""
         result = await self.db.execute(
-            select(Developer).where(Developer.id == developer_id)
+            select(Developer).where(Developer.user_id == user_id)
         )
-        return result.scalar_one_or_none() 
+        return result.scalar_one_or_none()
+    
+    def _get_user_type_from_role(self, role: UserRole) -> UserType:
+        """Convert database UserRole to API UserType."""
+        if role == UserRole.BUYER:
+            return UserType.BUYER
+        elif role == UserRole.DEVELOPER:
+            return UserType.DEVELOPER
+        elif role == UserRole.ADMIN:
+            return UserType.ADMIN
+        else:
+            return UserType.BUYER  # Default fallback 
