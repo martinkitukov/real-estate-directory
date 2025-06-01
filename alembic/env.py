@@ -9,7 +9,8 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 # Import your models
-from app.db.models import Base
+from app.infrastructure.database import Base
+from app.models import *
 from app.core.config import settings
 
 # this is the Alembic Config object, which provides
@@ -38,6 +39,27 @@ def get_url():
         url = url.replace("postgresql+asyncpg://", "postgresql://")
     return url
 
+def include_object(object, name, type_, reflected, compare_to):
+    """
+    Exclude PostGIS and other system tables from autogenerate.
+    """
+    # PostGIS system tables and views to ignore
+    postgis_tables = {
+        'spatial_ref_sys', 'geography_columns', 'geometry_columns', 'raster_columns', 'raster_overviews',
+        'topology', 'layer', 'edges', 'faces', 'nodes', 'relation', 'topoelement', 'topogeometry',
+        # Tiger geocoder tables
+        'addr', 'addrfeat', 'bg', 'county', 'county_lookup', 'countysub_lookup', 'cousub', 'direction_lookup',
+        'edges', 'faces', 'featnames', 'geocode_settings', 'geocode_settings_default', 'loader_lookuptables',
+        'loader_platform', 'loader_variables', 'pagc_gaz', 'pagc_lex', 'pagc_rules', 'place', 'place_lookup',
+        'secondary_unit_lookup', 'state', 'state_lookup', 'street_type_lookup', 'tabblock', 'tabblock20',
+        'tract', 'zcta5', 'zip_lookup', 'zip_lookup_all', 'zip_lookup_base', 'zip_state', 'zip_state_loc'
+    }
+    
+    if type_ == "table" and name in postgis_tables:
+        return False
+    
+    return True
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -56,6 +78,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=include_object
     )
 
     with context.begin_transaction():
@@ -79,7 +102,9 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection, 
+            target_metadata=target_metadata,
+            include_object=include_object
         )
 
         with context.begin_transaction():
