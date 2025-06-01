@@ -1,14 +1,34 @@
+from contextlib import asynccontextmanager
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app import *
+from app.infrastructure.database import Base, engine
 from app.core.config import settings
-from app.api.auth import router as auth_router
 
+# Ensure the database is not missing tables
+# Note: In production, use Alembic migrations instead
+# Base.metadata.create_all(bind=engine)
+
+# Create lifespan event handler for FastAPI
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup logic
+    print("Real Estate API started")
+    try:
+        yield
+    finally:
+        # Shutdown logic
+        print("Real Estate API shut down")
+
+# FastAPI app
 app = FastAPI(
     title=settings.APP_NAME,
     description="API for NovaDom - New Construction Real Estate Platform",
     version="1.0.0",
-    debug=settings.DEBUG
+    debug=settings.DEBUG,
+    lifespan=lifespan
 )
 
 # Configure CORS
@@ -24,8 +44,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
+# Router insertion
+prefix = "/api/v1"
+app.include_router(auth_router, prefix=prefix + "/auth")
+app.include_router(projects_router, prefix=prefix + "/projects")
+app.include_router(developers_router, prefix=prefix + "/developers")
 
 @app.get("/")
 async def root():
@@ -36,10 +59,11 @@ async def root():
         "environment": settings.ENVIRONMENT,
         "docs_url": "/docs",
         "auth_endpoints": {
-            "register_buyer": f"{settings.API_V1_PREFIX}/auth/register/buyer",
-            "register_developer": f"{settings.API_V1_PREFIX}/auth/register/developer",
-            "login": f"{settings.API_V1_PREFIX}/auth/login",
-            "profile": f"{settings.API_V1_PREFIX}/auth/profile"
+            "register_buyer": f"{prefix}/auth/register/buyer",
+            "register_developer": f"{prefix}/auth/register/developer",
+            "token": f"{prefix}/auth/token",
+            "login": f"{prefix}/auth/login",
+            "profile": f"{prefix}/auth/me"
         }
     }
 
@@ -53,5 +77,4 @@ async def health_check():
     }
 
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True) 
