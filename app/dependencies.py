@@ -2,6 +2,7 @@ from typing import Union
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.infrastructure import get_db, verify_token, invalid_credentials, deactivated_user, blocked_user, pending_user
 from app.models import User, Developer
@@ -16,27 +17,23 @@ async def get_valid_user(token: str = Depends(oauth2_scheme), db: AsyncSession =
     
     # Try to find user first
     result = await db.execute(
-        "SELECT * FROM users WHERE email = :email",
-        {"email": email}
+        select(User).where(User.email == email)
     )
-    user = result.fetchone()
+    user = result.scalar_one_or_none()
     
     if user:
-        user_obj = User(**dict(user))
-        if not user_obj.is_active:
+        if not user.is_active:
             raise deactivated_user
-        return user_obj
+        return user
     
     # Try to find developer
     result = await db.execute(
-        "SELECT * FROM developers WHERE email = :email",
-        {"email": email}
+        select(Developer).where(Developer.email == email)
     )
-    developer = result.fetchone()
+    developer = result.scalar_one_or_none()
     
     if developer:
-        developer_obj = Developer(**dict(developer))
-        return developer_obj
+        return developer
     
     raise invalid_credentials
 
@@ -83,6 +80,24 @@ async def get_current_unverified_developer(user: Union[User, Developer] = Depend
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied. Developer account required."
+        )
+    
+    return user
+
+async def get_current_admin(user: Union[User, Developer] = Depends(get_valid_user)):
+    """
+    Return an instance of User - the currently logged-in admin user.
+    """
+    if not isinstance(user, User):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Admin account required."
+        )
+    
+    if user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Admin privileges required."
         )
     
     return user 
