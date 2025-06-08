@@ -26,11 +26,12 @@ def get_admin_service(db: AsyncSession = Depends(get_db)) -> AdminService:
 @router.post("/create-admin", response_model=AdminProfileResponse, status_code=status.HTTP_201_CREATED)
 async def create_admin_user(
     admin_data: AdminRegistrationRequest,
+    current_admin: User = Depends(get_current_admin),  # 🔒 NOW REQUIRES ADMIN AUTH
     admin_service: AdminService = Depends(get_admin_service)
 ) -> AdminProfileResponse:
     """
     Create a new admin user. 
-    WARNING: This endpoint should be secured/disabled in production!
+    🔒 SECURE: Only existing admins can create new admins.
     """
     try:
         new_admin = await admin_service.create_admin_user(
@@ -40,6 +41,9 @@ async def create_admin_user(
             last_name=admin_data.last_name
         )
         
+        # TODO: Log admin creation action for audit trail
+        print(f"🔐 Admin {current_admin.email} created new admin: {new_admin.email}")
+        
         return AdminProfileResponse(
             id=new_admin.id,
             email=new_admin.email,
@@ -48,6 +52,31 @@ async def create_admin_user(
             last_name=new_admin.last_name,
             created_at=new_admin.created_at.isoformat()
         )
+        
+    except HTTPException:
+        raise
+
+
+@router.get("/admins", response_model=List[AdminProfileResponse])
+async def list_all_admins(
+    current_admin: User = Depends(get_current_admin),
+    admin_service: AdminService = Depends(get_admin_service)
+) -> List[AdminProfileResponse]:
+    """List all admin users. Only accessible by admins."""
+    try:
+        admins = await admin_service.get_all_admins()
+        
+        return [
+            AdminProfileResponse(
+                id=admin.id,
+                email=admin.email,
+                user_type=UserType.ADMIN,
+                first_name=admin.first_name,
+                last_name=admin.last_name,
+                created_at=admin.created_at.isoformat()
+            )
+            for admin in admins
+        ]
         
     except HTTPException:
         raise
