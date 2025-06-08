@@ -216,7 +216,109 @@ class ValidationErrorResponse(BaseModel):
             "example": {
                 "detail": "Validation failed",
                 "field_errors": {
-                    "password": ["Password must be at least 8 characters long"]
+                    "email": "Invalid email format"
                 }
+            }
+        }
+
+
+# ==================== Admin Requests ====================
+
+class AdminRegistrationRequest(BaseModel):
+    """Schema for admin user creation requests."""
+    email: EmailStr
+    password: str
+    first_name: str
+    last_name: str
+    
+    @validator('password')
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters long')
+        if not any(char.isdigit() for char in v):
+            raise ValueError('Password must contain at least one digit')
+        if not any(char.isalpha() for char in v):
+            raise ValueError('Password must contain at least one letter')
+        return v
+    
+    @validator('first_name', 'last_name')
+    def validate_names(cls, v):
+        if len(v.strip()) < 2:
+            raise ValueError('Name must be at least 2 characters long')
+        return v.strip().title()
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "email": "admin@novadom.com",
+                "password": "securepass123",
+                "first_name": "Admin",
+                "last_name": "User"
+            }
+        }
+
+
+class DeveloperVerificationRequest(BaseModel):
+    """Schema for developer verification/rejection requests."""
+    reason: Optional[str] = None
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "reason": "All documents verified successfully"
+            }
+        }
+
+
+# ==================== Admin Responses ====================
+
+class AdminProfileResponse(UserProfileResponse):
+    """Schema for admin profile responses."""
+    first_name: str
+    last_name: str
+    
+    class Config:
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "email": "admin@novadom.com",
+                "user_type": "admin",
+                "first_name": "Admin",
+                "last_name": "User",
+                "created_at": "2024-01-15T10:30:00Z"
+            }
+        }
+
+
+class DeveloperListResponse(BaseModel):
+    """Schema for list of developers with verification status."""
+    developers: list[DeveloperProfileResponse]
+    total_count: int
+    pending_count: int
+    verified_count: int
+    rejected_count: int
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "developers": [
+                    {
+                        "id": 1,
+                        "email": "developer@construction.com",
+                        "user_type": "unverified_developer",
+                        "company_name": "ABC Construction Ltd.",
+                        "contact_person": "Jane Smith",
+                        "phone": "+359 88 123 4567",
+                        "address": "Sofia, Bulgaria",
+                        "website": "https://abc-construction.com",
+                        "verification_status": "pending",
+                        "created_at": "2024-01-15T10:30:00Z"
+                    }
+                ],
+                "total_count": 1,
+                "pending_count": 1,
+                "verified_count": 0,
+                "rejected_count": 0
             }
         } 
