@@ -49,6 +49,7 @@ prefix = "/api/v1"
 app.include_router(auth_router, prefix=prefix + "/auth")
 app.include_router(projects_router, prefix=prefix + "/projects")
 app.include_router(developers_router, prefix=prefix + "/developers")
+app.include_router(admin_router, prefix=prefix + "/admin")
 
 @app.get("/")
 async def root():
@@ -64,6 +65,13 @@ async def root():
             "token": f"{prefix}/auth/token",
             "login": f"{prefix}/auth/login",
             "profile": f"{prefix}/auth/me"
+        },
+        "admin_endpoints": {
+            "create_admin": f"{prefix}/admin/create-admin",
+            "developers": f"{prefix}/admin/developers",
+            "pending_developers": f"{prefix}/admin/developers/pending",
+            "verify_developer": f"{prefix}/admin/developers/{{id}}/verify",
+            "reject_developer": f"{prefix}/admin/developers/{{id}}/reject"
         }
     }
 
