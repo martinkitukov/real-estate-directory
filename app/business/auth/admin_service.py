@@ -156,4 +156,11 @@ class AdminService:
         self.db.add(admin)
         await self.db.commit()
         await self.db.refresh(admin)
-        return admin 
+        return admin
+
+    async def get_all_admins(self) -> List[User]:
+        """Get all admin users in the system."""
+        result = await self.db.execute(
+            select(User).where(User.role == UserRole.ADMIN)
+        )
+        return result.scalars().all() 
