@@ -21,9 +21,11 @@ NovaDom is a web application connecting prospective homebuyers directly with dev
 - JWT Authentication
 
 ### Frontend
-- React
-- Mapbox GL JS
+- Next.js 15+ with TypeScript
+- React 18+
 - Tailwind CSS
+- shadcn/ui Components
+- Mapbox GL JS (for maps)
 
 ### Infrastructure
 - Docker
@@ -32,6 +34,7 @@ NovaDom is a web application connecting prospective homebuyers directly with dev
 
 ## Development Setup
 
+### Backend Setup
 1. Clone the repository
 2. Set up Python virtual environment:
    ```bash
@@ -52,20 +55,48 @@ NovaDom is a web application connecting prospective homebuyers directly with dev
    uvicorn app.main:app --reload
    ```
 
+### Frontend Setup
+1. Navigate to frontend directory:
+   ```bash
+   cd frontend
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
+4. Visit http://localhost:3000
+
 ## Project Structure
 
 ```
 novadom/
-├── app/                    # Backend application
+├── app/                    # FastAPI Backend
 │   ├── api/               # API routes
-│   ├── core/              # Core functionality
-│   ├── db/                # Database models and migrations
-│   ├── schemas/           # Pydantic models
-│   └── services/          # Business logic
-├── frontend/              # React frontend application
+│   ├── business/          # Business logic
+│   ├── infrastructure/    # Database & auth utilities
+│   ├── models/            # SQLAlchemy models
+│   └── schemas/           # Pydantic schemas
+├── frontend/              # Next.js Frontend Application
+│   ├── app/               # Next.js App Router
+│   ├── components/        # React Components
+│   ├── lib/               # Utilities
+│   └── public/            # Static assets
 ├── tests/                 # Test suite
 └── alembic/              # Database migrations
 ```
+
+## API Endpoints
+
+The FastAPI backend is running at http://localhost:8000
+
+- **Authentication**: `/api/v1/auth/`
+- **Projects**: `/api/v1/projects/`
+- **Developers**: `/api/v1/developers/`
+- **Admin**: `/api/v1/admin/`
 
 ## Contributing
 
