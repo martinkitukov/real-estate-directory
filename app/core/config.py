@@ -1,6 +1,7 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 from pydantic_settings import BaseSettings
-from pydantic import AnyHttpUrl, EmailStr, validator
+from pydantic import AnyHttpUrl, EmailStr, field_validator
+import json
 
 class Settings(BaseSettings):
     APP_NAME: str = "NovaDom"
@@ -9,28 +10,40 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
     
     # Security
-    SECRET_KEY: str
+    SECRET_KEY: str = "your-secret-key-here"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     # Database
-    DATABASE_URL: str
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
-    POSTGRES_DB: str
+    DATABASE_URL: str = "postgresql+asyncpg://novadom_user:novadom_pass@db:5432/novadom_db"
+    POSTGRES_USER: str = "novadom_user"
+    POSTGRES_PASSWORD: str = "novadom_pass"
+    POSTGRES_DB: str = "novadom_db"
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: str = "5432"
     
     # CORS
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
+    BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
     
-    @validator("BACKEND_CORS_ORIGINS", pre=True)
-    def assemble_cors_origins(cls, v: str | List[str]) -> List[str] | str:
-        if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
+        if isinstance(v, str):
+            try:
+                # Try to parse as JSON first
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except (json.JSONDecodeError, ValueError):
+                pass
+            
+            # If not JSON, try comma-separated
+            if not v.startswith("["):
+                return [i.strip() for i in v.split(",")]
+            return [v]
+        elif isinstance(v, list):
             return v
-        raise ValueError(v)
+        raise ValueError(f"Invalid CORS origins format: {v}")
     
     # Email (Optional for authentication testing)
     SMTP_TLS: bool = True
