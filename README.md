@@ -101,6 +101,38 @@ frontend/
 
 ## 🔧 Development
 
+### Docker Management
+
+**🧹 Clean Rebuild (Recommended for disk space issues):**
+```bash
+# Windows PowerShell
+./scripts/docker-clean-rebuild.ps1
+
+# Linux/Mac
+./scripts/docker-clean-rebuild.sh
+```
+
+**📊 Check Docker Disk Usage:**
+```bash
+./scripts/docker-disk-check.ps1
+```
+
+**🚀 Quick Development Commands:**
+```bash
+# Start services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f frontend
+docker-compose logs -f backend
+
+# Stop services
+docker-compose down
+
+# Complete cleanup (removes volumes)
+docker-compose down -v --remove-orphans
+```
+
 ### Backend Development
 
 ```bash

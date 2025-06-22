@@ -4,6 +4,10 @@ services:
     build: 
       context: ./frontend
       dockerfile: Dockerfile
+      tags:
+        - novadom-frontend:dev
+        - novadom-frontend:latest
+    image: novadom-frontend:dev
     container_name: novadom_frontend
     restart: unless-stopped
     ports:
@@ -45,6 +49,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
+      tags:
+        - novadom-backend:dev
+        - novadom-backend:latest
+    image: novadom-backend:dev
     container_name: novadom_backend
     restart: unless-stopped
     ports:

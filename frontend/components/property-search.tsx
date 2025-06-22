@@ -77,7 +77,7 @@ export default function PropertySearch() {
           <div className="space-y-2">
             <Label htmlFor="projectType">Project Type</Label>
             <Select value={filters.projectType} onValueChange={(value) => handleFilterChange("projectType", value)}>
-              <SelectTrigger>
+              <SelectTrigger id="projectType">
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
@@ -92,7 +92,7 @@ export default function PropertySearch() {
           <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
             <Select value={filters.status} onValueChange={(value) => handleFilterChange("status", value)}>
-              <SelectTrigger>
+              <SelectTrigger id="status">
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
@@ -107,7 +107,7 @@ export default function PropertySearch() {
           <div className="space-y-2">
             <Label htmlFor="city">City</Label>
             <Select value={filters.city} onValueChange={(value) => handleFilterChange("city", value)}>
-              <SelectTrigger>
+              <SelectTrigger id="city">
                 <SelectValue placeholder="All Cities" />
               </SelectTrigger>
               <SelectContent>

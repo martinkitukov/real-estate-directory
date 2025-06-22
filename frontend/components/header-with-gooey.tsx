@@ -1,17 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Menu, User, Globe, Sun, Moon, Home, Building2, Users, Info, Search } from "lucide-react"
-import Link from "next/link"
+import { Menu } from "lucide-react"
 import GooeyNav from "./ui/gooey-nav"
 import AuthModal from "./auth-modal"
 
@@ -21,20 +13,52 @@ interface HeaderProps {
 }
 
 export default function HeaderWithGooey({ theme = "light", onThemeToggle }: HeaderProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [language, setLanguage] = useState("EN")
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
 
   const handleAuthClick = () => {
     setShowAuthModal(true)
   }
 
+  // Detect mobile device
+  useEffect(() => {
+    const checkIsMobile = () => {
+      // Check if we're in the browser environment
+      if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+        return;
+      }
+      
+      const userAgent = navigator.userAgent || navigator.vendor || (window as unknown as { opera?: string }).opera || ''
+      const isMobileDevice = /android|blackberry|iemobile|ipad|iphone|ipod|opera mini|webos/i.test(userAgent)
+      const isSmallScreen = window.innerWidth <= 768
+      setIsMobile(isMobileDevice || isSmallScreen)
+    }
+
+    checkIsMobile()
+    
+    // Only add event listener if we're in the browser
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', checkIsMobile)
+      return () => window.removeEventListener('resize', checkIsMobile)
+    }
+  }, [])
+
   const navItems = [
     { label: "Home", href: "/" },
-    { label: "Properties", href: "/projects" },
-    { label: "Developers", href: "/developer" },
-    { label: "Search", href: "/property/search" },
-    { label: "About", href: "/about" }
+    { label: "Projects", href: "/projects" },
+    { label: "Developers", href: "/developer-registration" }
+  ]
+
+  const desktopNavItems = [
+    { label: "Home", href: "/" },
+    { label: "Projects", href: "/projects" },
+    { label: "Developers", href: "/developer-registration" }
+  ]
+
+  const mobileNavItems = [
+    { label: "Home", href: "/" },
+    { label: "Projects", href: "/projects" },
+    { label: "Developers", href: "/developer-registration" }
   ]
 
   return (
@@ -51,16 +75,34 @@ export default function HeaderWithGooey({ theme = "light", onThemeToggle }: Head
             </span>
           </div>
 
-          {/* Desktop Navigation with GooeyNav */}
-          <div className="hidden md:flex items-center justify-center flex-1 px-8">
-            <GooeyNav 
-              items={navItems}
-              initialActiveIndex={0}
-              animationTime={600}
-              particleCount={12}
-              particleDistances={[90, 10]}
-              colors={[1, 2, 3, 4, 5]}
-            />
+          {/* Navigation with GooeyNav - Responsive */}
+          <div className="flex items-center justify-center flex-1 px-4 md:px-8">
+            {/* Desktop GooeyNav */}
+            <div className="hidden md:flex justify-center">
+              <GooeyNav 
+                items={desktopNavItems}
+                initialActiveIndex={0}
+                animationTime={600}
+                particleCount={15}
+                particleDistances={[90, 10]}
+                particleR={100}
+                timeVariance={300}
+                colors={[1, 2, 3, 1, 2, 3, 1, 4]}
+              />
+            </div>
+            {/* Mobile GooeyNav */}
+            <div className="md:hidden flex justify-center w-full">
+              <GooeyNav 
+                items={mobileNavItems}
+                initialActiveIndex={0}
+                animationTime={600}
+                particleCount={12}
+                particleDistances={[60, 8]}
+                particleR={80}
+                timeVariance={250}
+                colors={[1, 2, 3, 1, 2, 3, 1, 4]}
+              />
+            </div>
           </div>
 
           {/* Auth Buttons */}
