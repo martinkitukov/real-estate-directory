@@ -27,6 +27,18 @@ services:
       - NODE_ENV=development
       - WATCHPACK_POLLING=true
       - NEXT_TELEMETRY_DISABLED=1
+      - NODE_OPTIONS=--max-old-space-size=2048
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # FastAPI Backend (Simple Build)
   backend:
