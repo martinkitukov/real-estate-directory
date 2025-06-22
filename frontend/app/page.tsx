@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import Header from "@/components/header"
+import HeaderWithGooey from "@/components/header-with-gooey"
 import HeroSection from "@/components/hero-section"
 import PropertySearch from "@/components/property-search"
 import PropertyCard from "@/components/property-card"
@@ -83,7 +83,7 @@ export default function HomePage() {
   return (
     <div className={theme === "dark" ? "dark" : ""}>
       <div className="min-h-screen bg-background text-foreground">
-        <Header theme={theme} onThemeToggle={handleThemeToggle} />
+        <HeaderWithGooey theme={theme} onThemeToggle={handleThemeToggle} />
 
         <main>
           <HeroSection />
