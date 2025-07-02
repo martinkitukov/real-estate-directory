@@ -9,6 +9,7 @@ import { Slider } from "@/components/ui/slider"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Search, Filter, X, ChevronDown, ChevronUp } from "lucide-react"
+import { formatCurrency } from "@/lib/utils"
 
 interface SearchFilters {
   location: string
@@ -148,8 +149,8 @@ export default function PropertySearch() {
                     className="w-full"
                   />
                   <div className="flex justify-between text-sm text-muted-foreground mt-2">
-                    <span>€{filters.priceRange[0].toLocaleString()}</span>
-                    <span>€{filters.priceRange[1].toLocaleString()}</span>
+                    <span>{formatCurrency(filters.priceRange[0])}</span>
+                    <span>{formatCurrency(filters.priceRange[1])}</span>
                   </div>
                 </div>
               </div>

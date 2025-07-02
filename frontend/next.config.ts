@@ -1,16 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Configure for Docker development
-  ...(process.env.NODE_ENV === 'development' && {
-    webpack: (config: any) => {
-      config.watchOptions = {
-        poll: 1000,
-        aggregateTimeout: 300,
-      };
-      return config;
-    },
-  }),
+  // Clean configuration optimized for development
+  experimental: {
+    // Enable optimizations
+    optimizePackageImports: ['@radix-ui/react-icons'],
+  },
 };
 
 export default nextConfig;

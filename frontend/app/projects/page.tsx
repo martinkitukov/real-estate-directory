@@ -23,6 +23,7 @@ import {
 import Image from "next/image"
 import Link from "next/link"
 import Header from "@/components/header"
+import { formatCurrency } from "@/lib/utils"
 
 const allProjects = [
   {
@@ -314,7 +315,7 @@ export default function ProjectsPage() {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Price Range (EUR)</span>
                 <span className="text-sm text-muted-foreground">
-                  €{filters.priceRange[0].toLocaleString()} - €{filters.priceRange[1].toLocaleString()}
+                  {formatCurrency(filters.priceRange[0])} - {formatCurrency(filters.priceRange[1])}
                 </span>
               </div>
               <Slider
