@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useAuthStore } from "@/stores/authStore"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -10,17 +11,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Menu, User, Globe, Sun, Moon } from "lucide-react"
+import { Menu, User, Globe, Sun, Moon, LogOut, Settings, Heart } from "lucide-react"
 import Link from "next/link"
 
 interface HeaderProps {
   theme?: "light" | "dark"
   onThemeToggle?: () => void
+  onAuthModalOpen?: (mode: "login" | "register", userType: "buyer" | "developer") => void
 }
 
-export default function Header({ theme = "light", onThemeToggle }: HeaderProps) {
+export default function Header({ theme = "light", onThemeToggle, onAuthModalOpen }: HeaderProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [language, setLanguage] = useState("EN")
+
+  const { user, isAuthenticated, logout } = useAuthStore()
 
   const navigation = [
     { name: "Home", href: "/" },
@@ -28,6 +32,100 @@ export default function Header({ theme = "light", onThemeToggle }: HeaderProps) 
     { name: "Developers", href: "/developers" },
     { name: "About", href: "/about" },
   ]
+
+  const handleLogout = () => {
+    logout()
+    setIsOpen(false)
+  }
+
+  const handleAuthAction = (mode: "login" | "register", userType: "buyer" | "developer") => {
+    if (onAuthModalOpen) {
+      onAuthModalOpen(mode, userType)
+    }
+    setIsOpen(false)
+  }
+
+  // Render authenticated user dropdown
+  const renderAuthenticatedDropdown = () => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="h-8">
+          <User className="h-4 w-4 mr-2" />
+          {user?.first_name || user?.company_name || "Account"}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <div className="px-2 py-1.5 text-sm">
+          <div className="font-semibold">{user?.first_name ? `${user.first_name} ${user.last_name || ''}` : user?.company_name}</div>
+          <div className="text-xs text-muted-foreground">{user?.email}</div>
+          {user?.user_type && (
+            <div className="text-xs text-blue-600 font-medium capitalize">{user.user_type}</div>
+          )}
+        </div>
+        <DropdownMenuSeparator />
+        {user?.user_type === 'developer' && (
+          <>
+            <DropdownMenuItem asChild>
+              <Link href="/developer/dashboard">
+                <Settings className="h-4 w-4 mr-2" />
+                Dashboard
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
+        {user?.user_type === 'buyer' && (
+          <>
+            <DropdownMenuItem asChild>
+              <Link href="/saved-properties">
+                <Heart className="h-4 w-4 mr-2" />
+                Saved Properties
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
+        <DropdownMenuItem>
+          <Settings className="h-4 w-4 mr-2" />
+          Settings
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+          <LogOut className="h-4 w-4 mr-2" />
+          Logout
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+
+  // Render non-authenticated dropdown
+  const renderGuestDropdown = () => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="h-8">
+          <User className="h-4 w-4 mr-2" />
+          Account
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <div className="px-2 py-1.5 text-sm font-semibold">For Buyers</div>
+        <DropdownMenuItem onClick={() => handleAuthAction('login', 'buyer')}>
+          Login
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleAuthAction('register', 'buyer')}>
+          Register
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <div className="px-2 py-1.5 text-sm font-semibold">For Developers</div>
+        <DropdownMenuItem onClick={() => handleAuthAction('login', 'developer')}>
+          Developer Login
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/developer-registration">Developer Registration</Link>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -75,23 +173,7 @@ export default function Header({ theme = "light", onThemeToggle }: HeaderProps) 
             </Button>
 
             {/* User Menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8">
-                  <User className="h-4 w-4 mr-2" />
-                  Account
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <div className="px-2 py-1.5 text-sm font-semibold">For Buyers</div>
-                <DropdownMenuItem>Login</DropdownMenuItem>
-                <DropdownMenuItem>Register</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <div className="px-2 py-1.5 text-sm font-semibold">For Developers</div>
-                <DropdownMenuItem>Developer Login</DropdownMenuItem>
-                <DropdownMenuItem>Developer Registration</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {isAuthenticated ? renderAuthenticatedDropdown() : renderGuestDropdown()}
           </div>
 
           {/* Mobile Menu */}
@@ -113,21 +195,65 @@ export default function Header({ theme = "light", onThemeToggle }: HeaderProps) 
                     {item.name}
                   </Link>
                 ))}
+                
                 <div className="border-t pt-4 space-y-2">
-                  <div className="text-sm font-semibold text-muted-foreground">For Buyers</div>
-                  <Button variant="outline" className="w-full justify-start">
-                    Login
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start">
-                    Register
-                  </Button>
-                  <div className="text-sm font-semibold text-muted-foreground mt-4">For Developers</div>
-                  <Button variant="outline" className="w-full justify-start">
-                    Developer Login
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start">
-                    Developer Registration
-                  </Button>
+                  {isAuthenticated ? (
+                    <>
+                      <div className="text-sm">
+                        <div className="font-semibold">{user?.first_name ? `${user.first_name} ${user.last_name || ''}` : user?.company_name}</div>
+                        <div className="text-xs text-muted-foreground">{user?.email}</div>
+                        {user?.user_type && (
+                          <div className="text-xs text-blue-600 font-medium capitalize">{user.user_type}</div>
+                        )}
+                      </div>
+                      
+                      {user?.user_type === 'developer' && (
+                        <Button variant="outline" className="w-full justify-start" asChild onClick={() => setIsOpen(false)}>
+                          <Link href="/developer/dashboard">
+                            <Settings className="h-4 w-4 mr-2" />
+                            Dashboard
+                          </Link>
+                        </Button>
+                      )}
+                      
+                      {user?.user_type === 'buyer' && (
+                        <Button variant="outline" className="w-full justify-start" asChild onClick={() => setIsOpen(false)}>
+                          <Link href="/saved-properties">
+                            <Heart className="h-4 w-4 mr-2" />
+                            Saved Properties
+                          </Link>
+                        </Button>
+                      )}
+                      
+                      <Button variant="outline" className="w-full justify-start">
+                        <Settings className="h-4 w-4 mr-2" />
+                        Settings
+                      </Button>
+                      
+                      <Button variant="outline" className="w-full justify-start text-red-600" onClick={handleLogout}>
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Logout
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-sm font-semibold text-muted-foreground">For Buyers</div>
+                      <Button variant="outline" className="w-full justify-start" onClick={() => handleAuthAction('login', 'buyer')}>
+                        Login
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start" onClick={() => handleAuthAction('register', 'buyer')}>
+                        Register
+                      </Button>
+                      
+                      <div className="text-sm font-semibold text-muted-foreground mt-4">For Developers</div>
+                      <Button variant="outline" className="w-full justify-start" onClick={() => handleAuthAction('login', 'developer')}>
+                        Developer Login
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start" asChild onClick={() => setIsOpen(false)}>
+                        <Link href="/developer-registration">Developer Registration</Link>
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </SheetContent>
