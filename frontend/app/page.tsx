@@ -6,6 +6,7 @@ import HeroSection from "@/components/hero-section"
 import PropertySearch from "@/components/property-search"
 import PropertyCard from "@/components/property-card"
 import { Button } from "@/components/ui/button"
+import AuthModal from "@/components/auth-modal"
 
 import MapSection from "@/components/map-section"
 import DeveloperSpotlight from "@/components/developer-spotlight"
@@ -67,13 +68,23 @@ const sampleProperties = [
 export default function HomePage() {
   const [theme, setTheme] = useState<"light" | "dark">("light")
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [authModalMode, setAuthModalMode] = useState<"login" | "register">("login")
+  const [authModalUserType, setAuthModalUserType] = useState<"buyer" | "developer">("buyer")
 
   const handleThemeToggle = () => {
     setTheme(theme === "light" ? "dark" : "light")
   }
 
+  const handleAuthModalOpen = (mode: "login" | "register", userType: "buyer" | "developer") => {
+    setAuthModalMode(mode)
+    setAuthModalUserType(userType)
+    setIsAuthModalOpen(true)
+  }
+
   const handlePropertySave = (id: string) => {
     console.log("Property saved:", id)
+    // Open auth modal for buyers to login/register
+    handleAuthModalOpen("login", "buyer")
   }
 
   const handlePropertyView = (id: string) => {
@@ -83,7 +94,11 @@ export default function HomePage() {
   return (
     <div className={theme === "dark" ? "dark" : ""}>
       <div className="min-h-screen bg-background text-foreground">
-        <Header theme={theme} onThemeToggle={handleThemeToggle} />
+        <Header 
+          theme={theme} 
+          onThemeToggle={handleThemeToggle} 
+          onAuthModalOpen={handleAuthModalOpen}
+        />
 
         <main>
           <HeroSection />
@@ -101,7 +116,7 @@ export default function HomePage() {
             <div className="container mx-auto px-4">
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-3xl font-bold">Featured Projects</h2>
-                <Button variant="outline" onClick={() => setIsAuthModalOpen(true)}>
+                <Button variant="outline" onClick={() => handleAuthModalOpen("login", "buyer")}>
                   Sign In to Save Properties
                 </Button>
               </div>
@@ -128,6 +143,13 @@ export default function HomePage() {
         <StickyMobileSearch />
         <MobileBottomNav />
         <SocialProofNotifications />
+        
+        <AuthModal 
+          isOpen={isAuthModalOpen} 
+          onClose={() => setIsAuthModalOpen(false)}
+          defaultMode={authModalMode}
+          defaultUserType={authModalUserType}
+        />
       </div>
     </div>
   )
