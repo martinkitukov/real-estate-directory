@@ -47,7 +47,8 @@ export const useAuthStore = create<AuthState>()(
           const response = await apiClient.login(email, password)
           
           if (response.error) {
-            set({ error: response.error, isLoading: false })
+            const errorMessage = typeof response.error === 'string' ? response.error : 'Login failed'
+            set({ error: errorMessage, isLoading: false })
             return false
           }
 
@@ -87,7 +88,8 @@ export const useAuthStore = create<AuthState>()(
           const response = await apiClient.registerBuyer(userData)
           
           if (response.error) {
-            set({ error: response.error, isLoading: false })
+            const errorMessage = typeof response.error === 'string' ? response.error : 'Registration failed'
+            set({ error: errorMessage, isLoading: false })
             return false
           }
 
@@ -114,7 +116,8 @@ export const useAuthStore = create<AuthState>()(
           const response = await apiClient.registerDeveloper(userData)
           
           if (response.error) {
-            set({ error: response.error, isLoading: false })
+            const errorMessage = typeof response.error === 'string' ? response.error : 'Registration failed'
+            set({ error: errorMessage, isLoading: false })
             return false
           }
 
