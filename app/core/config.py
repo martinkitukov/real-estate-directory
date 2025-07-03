@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://novadom_user:novadom_pass@db:5432/novadom_db"
+    DATABASE_URL: str = "postgresql+asyncpg://novadom_user:novadom_pass@localhost:5432/novadom_db"
     POSTGRES_USER: str = "novadom_user"
     POSTGRES_PASSWORD: str = "novadom_pass"
     POSTGRES_DB: str = "novadom_db"
