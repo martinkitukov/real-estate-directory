@@ -37,36 +37,36 @@ class AuthService:
                 raise EmailValidationError(user_data.email)
             
             # Check if email already exists in users table
-            result = await self.db.execute(
-                select(User).where(User.email == user_data.email)
-            )
-            existing_user = result.scalar_one_or_none()
-            
-            if existing_user:
+        result = await self.db.execute(
+            select(User).where(User.email == user_data.email)
+        )
+        existing_user = result.scalar_one_or_none()
+        
+        if existing_user:
                 raise EmailAlreadyExistsError(user_data.email)
 
-            # Check if email exists in developers table
-            result = await self.db.execute(
-                select(Developer).where(Developer.email == user_data.email)
-            )
-            existing_developer = result.scalar_one_or_none()
-            
-            if existing_developer:
+        # Check if email exists in developers table
+        result = await self.db.execute(
+            select(Developer).where(Developer.email == user_data.email)
+        )
+        existing_developer = result.scalar_one_or_none()
+        
+        if existing_developer:
                 raise EmailAlreadyExistsError(user_data.email)
 
-            # Create new user
-            user = User(
-                email=user_data.email,
-                password_hash=hash_password(user_data.password),
-                first_name=user_data.first_name,
-                last_name=user_data.last_name,
-                role=UserRole.BUYER
-            )
+        # Create new user
+        user = User(
+            email=user_data.email,
+            password_hash=hash_password(user_data.password),
+            first_name=user_data.first_name,
+            last_name=user_data.last_name,
+            role=UserRole.BUYER
+        )
 
-            self.db.add(user)
-            await self.db.commit()
-            await self.db.refresh(user)
-            return user
+        self.db.add(user)
+        await self.db.commit()
+        await self.db.refresh(user)
+        return user
             
         except EmailAlreadyExistsError:
             # Re-raise our custom exceptions
@@ -93,39 +93,39 @@ class AuthService:
                 raise EmailValidationError(developer_data.email)
             
             # Check if email already exists in users table
-            result = await self.db.execute(
-                select(User).where(User.email == developer_data.email)
-            )
-            existing_user = result.scalar_one_or_none()
-            
-            if existing_user:
+        result = await self.db.execute(
+            select(User).where(User.email == developer_data.email)
+        )
+        existing_user = result.scalar_one_or_none()
+        
+        if existing_user:
                 raise EmailAlreadyExistsError(developer_data.email)
 
-            # Check if email exists in developers table
-            result = await self.db.execute(
-                select(Developer).where(Developer.email == developer_data.email)
-            )
-            existing_developer = result.scalar_one_or_none()
-            
-            if existing_developer:
+        # Check if email exists in developers table
+        result = await self.db.execute(
+            select(Developer).where(Developer.email == developer_data.email)
+        )
+        existing_developer = result.scalar_one_or_none()
+        
+        if existing_developer:
                 raise EmailAlreadyExistsError(developer_data.email)
 
-            # Create new developer
-            developer = Developer(
-                email=developer_data.email,
-                password_hash=hash_password(developer_data.password),
-                company_name=developer_data.company_name,
-                contact_person=developer_data.contact_person,
-                phone=developer_data.phone,
-                address=developer_data.address,
-                website=developer_data.website,
-                verification_status=VerificationStatus.PENDING
-            )
-            
-            self.db.add(developer)
-            await self.db.commit()
-            await self.db.refresh(developer)
-            return developer
+        # Create new developer
+        developer = Developer(
+            email=developer_data.email,
+            password_hash=hash_password(developer_data.password),
+            company_name=developer_data.company_name,
+            contact_person=developer_data.contact_person,
+            phone=developer_data.phone,
+            address=developer_data.address,
+            website=developer_data.website,
+            verification_status=VerificationStatus.PENDING
+        )
+        
+        self.db.add(developer)
+        await self.db.commit()
+        await self.db.refresh(developer)
+        return developer
             
         except EmailAlreadyExistsError:
             # Re-raise our custom exceptions
@@ -151,34 +151,34 @@ class AuthService:
             if not login_data.email or "@" not in login_data.email:
                 raise EmailValidationError(login_data.email)
             
-            # Try to find user first
-            result = await self.db.execute(
-                select(User).where(User.email == login_data.email)
-            )
-            user = result.scalar_one_or_none()
-            
-            if user:
-                if not verify_password(login_data.password, user.password_hash):
+        # Try to find user first
+        result = await self.db.execute(
+            select(User).where(User.email == login_data.email)
+        )
+        user = result.scalar_one_or_none()
+        
+        if user:
+            if not verify_password(login_data.password, user.password_hash):
                     raise InvalidCredentialsError(login_data.email)
-                
-                if not user.is_active:
+            
+            if not user.is_active:
                     raise AccountDisabledError()
-                
-                token = generate_token(user.email)
-                return user, token
-
-            # Try to find developer
-            result = await self.db.execute(
-                select(Developer).where(Developer.email == login_data.email)
-            )
-            developer = result.scalar_one_or_none()
             
-            if developer:
-                if not verify_password(login_data.password, developer.password_hash):
+            token = generate_token(user.email)
+            return user, token
+
+        # Try to find developer
+        result = await self.db.execute(
+            select(Developer).where(Developer.email == login_data.email)
+        )
+        developer = result.scalar_one_or_none()
+        
+        if developer:
+            if not verify_password(login_data.password, developer.password_hash):
                     raise InvalidCredentialsError(login_data.email)
-                
-                token = generate_token(developer.email)
-                return developer, token
+            
+            token = generate_token(developer.email)
+            return developer, token
 
             # No user found - use same error as incorrect password for security
             raise InvalidCredentialsError(login_data.email)
@@ -193,7 +193,7 @@ class AuthService:
                 operation="user authentication",
                 original_error=e,
                 user_message=ErrorMessages.System.DATABASE_ERROR
-            )
+        )
 
     async def get_current_user(self, token: str) -> Union[User, Developer]:
         """
@@ -209,26 +209,26 @@ class AuthService:
             raise TokenInvalidError()
         
         try:
-            # Try to find user first
-            result = await self.db.execute(
-                select(User).where(User.email == email)
-            )
-            user = result.scalar_one_or_none()
-            
-            if user:
-                if not user.is_active:
+        # Try to find user first
+        result = await self.db.execute(
+            select(User).where(User.email == email)
+        )
+        user = result.scalar_one_or_none()
+        
+        if user:
+            if not user.is_active:
                     raise AccountDisabledError()
-                return user
-            
-            # Try to find developer
-            result = await self.db.execute(
-                select(Developer).where(Developer.email == email)
-            )
-            developer = result.scalar_one_or_none()
-            
-            if developer:
-                return developer
-            
+            return user
+        
+        # Try to find developer
+        result = await self.db.execute(
+            select(Developer).where(Developer.email == email)
+        )
+        developer = result.scalar_one_or_none()
+        
+        if developer:
+            return developer
+        
             # User not found
             raise UserNotFoundError(email)
             
@@ -242,4 +242,4 @@ class AuthService:
                 operation="user lookup",
                 original_error=e,
                 user_message=ErrorMessages.System.DATABASE_ERROR
-            ) 
+        ) 

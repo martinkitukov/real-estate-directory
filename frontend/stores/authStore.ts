@@ -176,9 +176,9 @@ export const useAuthStore = create<AuthState>()(
           }
 
           // Successfully loaded user
-          set({
-            user: response.data,
-            isAuthenticated: true,
+            set({
+              user: response.data,
+              isAuthenticated: true,
             isLoading: false,
             error: null
           })

@@ -32,16 +32,16 @@ async def register_buyer(
     auth_service: AuthService = Depends(get_auth_service)
 ) -> BuyerProfileResponse:
     """Register a new buyer account."""
-    new_user = await auth_service.register_buyer(registration_data)
-    
-    return BuyerProfileResponse(
-        id=new_user.id,
-        email=new_user.email,
-        user_type=UserType.BUYER,
-        first_name=new_user.first_name,
-        last_name=new_user.last_name,
-        created_at=new_user.created_at.isoformat()
-    )
+        new_user = await auth_service.register_buyer(registration_data)
+        
+        return BuyerProfileResponse(
+            id=new_user.id,
+            email=new_user.email,
+            user_type=UserType.BUYER,
+            first_name=new_user.first_name,
+            last_name=new_user.last_name,
+            created_at=new_user.created_at.isoformat()
+        )
 
 
 @router.post("/register/developer", response_model=DeveloperProfileResponse, status_code=status.HTTP_201_CREATED)
@@ -50,20 +50,20 @@ async def register_developer(
     auth_service: AuthService = Depends(get_auth_service)
 ) -> DeveloperProfileResponse:
     """Register a new developer account."""
-    new_developer = await auth_service.register_developer(registration_data)
-    
-    return DeveloperProfileResponse(
-        id=new_developer.id,
-        email=new_developer.email,
-        user_type=UserType.UNVERIFIED_DEVELOPER,
-        company_name=new_developer.company_name,
-        contact_person=new_developer.contact_person,
-        phone=new_developer.phone,
-        address=new_developer.address,
-        website=new_developer.website,
-        verification_status=new_developer.verification_status,
-        created_at=new_developer.created_at.isoformat()
-    )
+        new_developer = await auth_service.register_developer(registration_data)
+        
+        return DeveloperProfileResponse(
+            id=new_developer.id,
+            email=new_developer.email,
+            user_type=UserType.UNVERIFIED_DEVELOPER,
+            company_name=new_developer.company_name,
+            contact_person=new_developer.contact_person,
+            phone=new_developer.phone,
+            address=new_developer.address,
+            website=new_developer.website,
+            verification_status=new_developer.verification_status,
+            created_at=new_developer.created_at.isoformat()
+        )
 
 
 @router.post("/token", response_model=TokenResponse)
@@ -74,29 +74,29 @@ async def login_for_access_token(
     """
     OAuth2 compatible token login, get an access token for future requests.
     """
-    # Create UserLoginRequest from OAuth2PasswordRequestForm
-    login_data = UserLoginRequest(
-        email=form_data.username,  # OAuth2 uses username field for email
-        password=form_data.password
-    )
-    
-    user, access_token = await auth_service.authenticate_user(login_data)
-    
-    # Determine user type for response
-    if isinstance(user, User):
-        user_type = UserType.BUYER
-    elif isinstance(user, Developer):
-        user_type = (
-            UserType.DEVELOPER if user.verification_status == "verified"
-            else UserType.UNVERIFIED_DEVELOPER
+        # Create UserLoginRequest from OAuth2PasswordRequestForm
+        login_data = UserLoginRequest(
+            email=form_data.username,  # OAuth2 uses username field for email
+            password=form_data.password
         )
-    
-    return TokenResponse(
-        access_token=access_token,
-        token_type="bearer",
-        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Convert to seconds
-        user_type=user_type
-    )
+        
+        user, access_token = await auth_service.authenticate_user(login_data)
+        
+        # Determine user type for response
+        if isinstance(user, User):
+            user_type = UserType.BUYER
+        elif isinstance(user, Developer):
+            user_type = (
+                UserType.DEVELOPER if user.verification_status == "verified"
+                else UserType.UNVERIFIED_DEVELOPER
+            )
+        
+        return TokenResponse(
+            access_token=access_token,
+            token_type="bearer",
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Convert to seconds
+            user_type=user_type
+        )
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -105,23 +105,23 @@ async def login(
     auth_service: AuthService = Depends(get_auth_service)
 ) -> TokenResponse:
     """Alternative login endpoint using JSON body instead of form data."""
-    user, access_token = await auth_service.authenticate_user(login_data)
-    
-    # Determine user type for response
-    if isinstance(user, User):
-        user_type = UserType.BUYER
-    elif isinstance(user, Developer):
-        user_type = (
-            UserType.DEVELOPER if user.verification_status == "verified"
-            else UserType.UNVERIFIED_DEVELOPER
+        user, access_token = await auth_service.authenticate_user(login_data)
+        
+        # Determine user type for response
+        if isinstance(user, User):
+            user_type = UserType.BUYER
+        elif isinstance(user, Developer):
+            user_type = (
+                UserType.DEVELOPER if user.verification_status == "verified"
+                else UserType.UNVERIFIED_DEVELOPER
+            )
+        
+        return TokenResponse(
+            access_token=access_token,
+            token_type="bearer",
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Convert to seconds
+            user_type=user_type
         )
-    
-    return TokenResponse(
-        access_token=access_token,
-        token_type="bearer",
-        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Convert to seconds
-        user_type=user_type
-    )
 
 
 @router.get("/me", response_model=Union[BuyerProfileResponse, DeveloperProfileResponse])

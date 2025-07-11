@@ -15,7 +15,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Initialize auth store and set token in API client
         initialize()
         
-        // Load user data on app initialization
+    // Load user data on app initialization
         await loadUser()
         
         if (isMounted) {
