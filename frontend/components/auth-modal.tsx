@@ -146,7 +146,7 @@ export default function AuthModal({
         {/* Error Display */}
         {error && (
           <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950 dark:text-red-400 rounded-md">
-            {typeof error === 'string' ? error : 'An error occurred. Please try again.'}
+            {error}
           </div>
         )}
 
