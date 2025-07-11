@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Header from "@/components/header"
 import HeroSection from "@/components/hero-section"
 import PropertySearch from "@/components/property-search"
@@ -12,8 +12,9 @@ import MapSection from "@/components/map-section"
 import DeveloperSpotlight from "@/components/developer-spotlight"
 import { StickyMobileSearch, MobileBottomNav } from "@/components/mobile-enhancements"
 import { FilterChips, SocialProofNotifications, RecentlyViewed } from "@/components/interactive-features"
+import { apiClient, convertBackendProject, type ProjectType } from "@/lib/api"
 
-// Sample property data
+// Sample property data (fallback)
 const sampleProperties = [
   {
     id: "1",
@@ -70,6 +71,33 @@ export default function HomePage() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [authModalMode, setAuthModalMode] = useState<"login" | "register">("login")
   const [authModalUserType, setAuthModalUserType] = useState<"buyer" | "developer">("buyer")
+  
+  // State for real project data
+  const [projects, setProjects] = useState<any[]>(sampleProperties)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Load projects from API
+  useEffect(() => {
+    async function loadProjects() {
+      try {
+        setLoading(true)
+        const response = await apiClient.getProjects({ per_page: 6 })
+        const convertedProjects = response.projects.map(convertBackendProject)
+        setProjects(convertedProjects)
+        setError(null)
+      } catch (err) {
+        console.error('Failed to load projects:', err)
+        setError('Failed to load projects. Using sample data.')
+        // Keep using sample data as fallback
+        setProjects(sampleProperties)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadProjects()
+  }, [])
 
   const handleThemeToggle = () => {
     setTheme(theme === "light" ? "dark" : "light")
@@ -121,17 +149,35 @@ export default function HomePage() {
                 </Button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {sampleProperties.map((property) => (
-                  <PropertyCard
-                    key={property.id}
-                    {...property}
-                    onSave={handlePropertySave}
-                    onViewDetails={handlePropertyView}
-                    onContactDeveloper={(id) => console.log("Contact developer for:", id)}
-                  />
-                ))}
-              </div>
+              {error && (
+                <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <p className="text-yellow-800">{error}</p>
+                </div>
+              )}
+
+              {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="bg-gray-300 h-48 rounded-lg mb-4"></div>
+                      <div className="bg-gray-300 h-4 rounded mb-2"></div>
+                      <div className="bg-gray-300 h-4 rounded w-3/4"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {projects.map((property) => (
+                    <PropertyCard
+                      key={property.id}
+                      {...property}
+                      onSave={handlePropertySave}
+                      onViewDetails={handlePropertyView}
+                      onContactDeveloper={(id) => console.log("Contact developer for:", id)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </section>
 
