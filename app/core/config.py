@@ -22,6 +22,15 @@ class Settings(BaseSettings):
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: str = "5432"
     
+    # Redis
+    REDIS_URL: str = "redis://localhost:6379"
+    
+    # Initial Admin Setup
+    INITIAL_ADMIN_EMAIL: Optional[str] = None
+    INITIAL_ADMIN_PASSWORD: Optional[str] = None
+    INITIAL_ADMIN_FIRST_NAME: Optional[str] = None
+    INITIAL_ADMIN_LAST_NAME: Optional[str] = None
+    
     # CORS
     BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
     
