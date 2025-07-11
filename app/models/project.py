@@ -26,8 +26,8 @@ class Project(Base):
     city = Column(String)
     neighborhood = Column(String)
     country = Column(String)
-    project_type = Column(Enum(ProjectType, name='project_type'))
-    status = Column(Enum(ProjectStatus, name='project_status'))
+    project_type = Column(Enum(ProjectType, name='project_type', values_callable=lambda obj: [e.value for e in obj]))
+    status = Column(Enum(ProjectStatus, name='project_status', values_callable=lambda obj: [e.value for e in obj]))
     expected_completion_date = Column(DateTime)
     cover_image_url = Column(String)
     gallery_urls = Column(Text)  # JSON string of URLs
