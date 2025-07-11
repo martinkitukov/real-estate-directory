@@ -29,6 +29,7 @@ interface AuthState {
   logout: () => void
   loadUser: () => Promise<void>
   clearError: () => void
+  initialize: () => void
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -148,34 +149,63 @@ export const useAuthStore = create<AuthState>()(
       },
 
       loadUser: async () => {
-        const token = get().token
-        if (!token) return
+        const state = get()
+        const token = state.token
+        if (!token) {
+          // No token, ensure clean state
+          set({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            error: null
+          })
+          return
+        }
 
-        set({ isLoading: true })
+        set({ isLoading: true, error: null })
         apiClient.setToken(token)
         
         try {
           const response = await apiClient.getCurrentUser()
           
-          if (response.error) {
-            // Token is invalid, logout
+          if (response.error || !response.data) {
+            // Token is invalid or no user data, logout
+            console.log('Failed to load user, logging out:', response.error)
             get().logout()
             return
           }
 
-          if (response.data) {
-            set({
-              user: response.data,
-              isAuthenticated: true,
-              isLoading: false
+          // Successfully loaded user
+          set({
+            user: response.data,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null
+          })
+        } catch (error) {
+          console.error('Error loading user:', error)
+          // Only logout if it's a genuine auth error, not a network error
+          if (error instanceof Error && error.message.includes('Not authenticated')) {
+            get().logout()
+          } else {
+            // Network error - keep auth state but show error
+            set({ 
+              isLoading: false,
+              error: 'Failed to verify authentication. Please check your connection.'
             })
           }
-        } catch (error) {
-          get().logout()
         }
       },
 
-      clearError: () => set({ error: null })
+      clearError: () => set({ error: null }),
+
+      // Initialize auth from stored state
+      initialize: () => {
+        const state = get()
+        if (state.token) {
+          apiClient.setToken(state.token)
+        }
+      }
     }),
     {
       name: 'auth-storage',
@@ -183,7 +213,13 @@ export const useAuthStore = create<AuthState>()(
         token: state.token,
         user: state.user,
         isAuthenticated: state.isAuthenticated
-      })
+      }),
+      onRehydrateStorage: () => (state) => {
+        // Set token in API client when state is rehydrated from localStorage
+        if (state?.token) {
+          apiClient.setToken(state.token)
+        }
+      }
     }
   )
 ) 
