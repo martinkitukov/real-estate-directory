@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import *
 from app.infrastructure.database import Base, engine
 from app.core.config import settings
+from app.errors import setup_error_handlers
 
 # Ensure the database is not missing tables
 # Note: In production, use Alembic migrations instead
@@ -30,6 +31,9 @@ app = FastAPI(
     debug=settings.DEBUG,
     lifespan=lifespan
 )
+
+# Setup error handlers
+setup_error_handlers(app)
 
 # Configure CORS
 app.add_middleware(
