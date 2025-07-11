@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { apiClient } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -35,55 +36,65 @@ const sidebarItems = [
   { icon: Settings, label: "Settings", href: "/developer/settings" },
 ]
 
-const projects = [
-  {
-    id: "1",
-    name: "Marina Bay Complex",
-    location: "Sofia, Lozenets",
-    status: "Under Construction",
-    units: 120,
-    views: 1247,
-    inquiries: 23,
-    leads: 8,
-    completion: 65,
-    lastUpdated: "2 days ago",
-  },
-  {
-    id: "2",
-    name: "Green Valley Estate",
-    location: "Sofia, Vitosha",
-    status: "Completed",
-    units: 85,
-    views: 892,
-    inquiries: 15,
-    leads: 5,
-    completion: 100,
-    lastUpdated: "1 week ago",
-  },
-  {
-    id: "3",
-    name: "Central Park Residence",
-    location: "Plovdiv, Center",
-    status: "Planning",
-    units: 95,
-    views: 456,
-    inquiries: 12,
-    leads: 3,
-    completion: 15,
-    lastUpdated: "3 days ago",
-  },
-]
-
-const notifications = [
-  { id: 1, message: "New inquiry for Marina Bay Complex", time: "2 hours ago", unread: true },
-  { id: 2, message: "Project update approved for Green Valley", time: "1 day ago", unread: true },
-  { id: 3, message: "Monthly analytics report ready", time: "2 days ago", unread: false },
-  { id: 4, message: "New lead from website contact form", time: "3 days ago", unread: false },
-]
-
 export default function DeveloperDashboard() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [unreadNotifications, setUnreadNotifications] = useState(2)
+  const [projects, setProjects] = useState<any[]>([])
+  const [stats, setStats] = useState<any>(null)
+  const [subscription, setSubscription] = useState<any>(null)
+  const [notifications, setNotifications] = useState<any[]>([])
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true)
+        
+        // Fetch all dashboard data in parallel
+        const [projectsRes, statsRes, subscriptionRes] = await Promise.all([
+          apiClient.getDeveloperProjects({ page: 1, per_page: 10 }),
+          apiClient.getDeveloperStats(),
+          apiClient.getDeveloperSubscription()
+        ])
+
+        if (projectsRes.data) {
+          // Convert backend projects to dashboard format
+          const convertedProjects = projectsRes.data.projects.map((project: any) => ({
+            id: project.id.toString(),
+            name: project.title,
+            location: `${project.city}${project.neighborhood ? ', ' + project.neighborhood : ''}`,
+            status: project.status === 'under_construction' ? 'Under Construction' : 
+                   project.status === 'planning' ? 'Planning' : 'Completed',
+            units: 0, // Would need to be added to backend
+            views: 100, // Mock for now - would come from analytics
+            inquiries: 5, // Mock for now - would come from inquiries table
+            leads: 2, // Mock for now - would come from leads table
+            completion: project.status === 'completed' ? 100 : 
+                       project.status === 'under_construction' ? 65 : 15,
+            lastUpdated: new Date(project.updated_at).toLocaleDateString()
+          }))
+          setProjects(convertedProjects)
+        }
+
+        if (statsRes.data) {
+          setStats(statsRes.data)
+          setNotifications(statsRes.data.recent_activity || [])
+          setUnreadNotifications(statsRes.data.recent_activity?.filter((n: any) => n.unread).length || 0)
+        }
+
+        if (subscriptionRes.data) {
+          setSubscription(subscriptionRes.data)
+        }
+
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDashboardData()
+  }, [])
 
   const statusColors = {
     Planning: "bg-yellow-500",
@@ -96,6 +107,17 @@ export default function DeveloperDashboard() {
       project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.location.toLowerCase().includes(searchTerm.toLowerCase()),
   )
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -193,13 +215,13 @@ export default function DeveloperDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">Total Projects</p>
-                      <p className="text-2xl font-bold">12</p>
+                      <p className="text-2xl font-bold">{stats?.total_projects || 0}</p>
                     </div>
                     <Building className="h-8 w-8 text-primary" />
                   </div>
                   <div className="flex items-center mt-2 text-sm">
                     <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                    <span className="text-green-500">+2 this month</span>
+                    <span className="text-green-500">{stats?.projects_growth || "+0 this month"}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -209,13 +231,13 @@ export default function DeveloperDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">Total Views</p>
-                      <p className="text-2xl font-bold">2,595</p>
+                      <p className="text-2xl font-bold">{stats?.total_views || 0}</p>
                     </div>
                     <Eye className="h-8 w-8 text-blue-500" />
                   </div>
                   <div className="flex items-center mt-2 text-sm">
                     <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                    <span className="text-green-500">+12% this week</span>
+                    <span className="text-green-500">{stats?.views_growth || "+0% this week"}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -225,13 +247,13 @@ export default function DeveloperDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">Inquiries</p>
-                      <p className="text-2xl font-bold">50</p>
+                      <p className="text-2xl font-bold">{stats?.total_inquiries || 0}</p>
                     </div>
                     <MessageSquare className="h-8 w-8 text-orange-500" />
                   </div>
                   <div className="flex items-center mt-2 text-sm">
                     <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                    <span className="text-green-500">+8 this week</span>
+                    <span className="text-green-500">{stats?.inquiries_growth || "+0 this week"}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -241,13 +263,13 @@ export default function DeveloperDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">Active Leads</p>
-                      <p className="text-2xl font-bold">16</p>
+                      <p className="text-2xl font-bold">{stats?.active_leads || 0}</p>
                     </div>
                     <Users className="h-8 w-8 text-purple-500" />
                   </div>
                   <div className="flex items-center mt-2 text-sm">
                     <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                    <span className="text-green-500">+3 this week</span>
+                    <span className="text-green-500">{stats?.leads_growth || "+0 this week"}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -354,15 +376,15 @@ export default function DeveloperDashboard() {
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-sm">Plan</span>
-                        <Badge className="bg-yellow-100 text-yellow-800">Premium</Badge>
+                        <Badge className="bg-yellow-100 text-yellow-800">{subscription?.plan || "Basic"}</Badge>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-sm">Projects</span>
-                        <span className="font-medium">12 / 25</span>
+                        <span className="font-medium">{subscription?.projects_used || 0} / {subscription?.projects_limit || 0}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-sm">Renewal</span>
-                        <span className="font-medium">Jan 15, 2025</span>
+                        <span className="font-medium">{subscription?.renewal_date || "N/A"}</span>
                       </div>
                       <Button className="w-full" variant="outline">
                         Upgrade Plan
