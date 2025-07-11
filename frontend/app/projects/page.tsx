@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -24,6 +24,7 @@ import Image from "next/image"
 import Link from "next/link"
 import Header from "@/components/header"
 import { formatCurrency } from "@/lib/utils"
+import { apiClient, convertBackendProject, type ProjectType } from "@/lib/api"
 
 const allProjects = [
   {
@@ -136,6 +137,13 @@ export default function ProjectsPage() {
   const [sortBy, setSortBy] = useState("featured")
   const [currentPage, setCurrentPage] = useState(1)
   const [savedProjects, setSavedProjects] = useState<string[]>([])
+  
+  // Real data state
+  const [projects, setProjects] = useState<any[]>(allProjects)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
 
   // Filters
   const [filters, setFilters] = useState({
@@ -149,8 +157,42 @@ export default function ProjectsPage() {
 
   const itemsPerPage = 9
 
-  // Filter and sort projects
-  let filteredProjects = allProjects.filter((project) => {
+  // Load projects from API
+  useEffect(() => {
+    async function loadProjects() {
+      try {
+        setLoading(true)
+        const response = await apiClient.getProjects({
+          search: searchTerm || undefined,
+          city: filters.city || undefined,
+          project_type: filters.projectType || undefined,
+          status: filters.status || undefined,
+          page: currentPage,
+          per_page: itemsPerPage
+        })
+        
+        const convertedProjects = response.projects.map(convertBackendProject)
+        setProjects(convertedProjects)
+        setTotal(response.total)
+        setTotalPages(response.total_pages)
+        setError(null)
+      } catch (err) {
+        console.error('Failed to load projects:', err)
+        setError('Failed to load projects. Using sample data.')
+        // Fallback to mock data
+        setProjects(allProjects)
+        setTotalPages(Math.ceil(allProjects.length / itemsPerPage))
+        setTotal(allProjects.length)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadProjects()
+  }, [searchTerm, filters, currentPage])
+
+  // Legacy filter logic (for fallback data)
+  let filteredProjects = projects.filter((project) => {
     const matchesSearch =
       project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.developer.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -168,7 +210,7 @@ export default function ProjectsPage() {
     return matchesSearch && matchesCity && matchesType && matchesStatus && matchesAct14 && matchesPrice
   })
 
-  // Sort projects
+  // Sort projects (only for fallback data)
   if (sortBy === "featured") {
     filteredProjects = filteredProjects.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0))
   } else if (sortBy === "price-low") {
@@ -181,10 +223,8 @@ export default function ProjectsPage() {
     )
   }
 
-  // Pagination
-  const totalPages = Math.ceil(filteredProjects.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const paginatedProjects = filteredProjects.slice(startIndex, startIndex + itemsPerPage)
+  // For API data, we already have pagination from the server  
+  const paginatedProjects = loading ? [] : projects
 
   const toggleSaveProject = (projectId: string) => {
     setSavedProjects((prev) =>
@@ -334,8 +374,8 @@ export default function ProjectsPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <p className="text-muted-foreground">
-              Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredProjects.length)} of{" "}
-              {filteredProjects.length} projects
+              Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, loading ? 0 : total)} of{" "}
+              {loading ? 0 : total} projects
             </p>
           </div>
         </div>
